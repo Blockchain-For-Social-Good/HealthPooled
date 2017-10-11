@@ -3,6 +3,10 @@ import json
 from subprocess import Popen, PIPE
 
 
+def declare_contract():
+    return input("Enter the path to your contract (.sol): ")
+
+
 def connect_to_rpc():
     """Connect to an RPC.
     Enter the ip and port of the rpc when prompted.
@@ -23,57 +27,63 @@ def connect_to_rpc():
     return web3
 
 
-def create_contract(web3):
-    contract = createContract(web3, 'HealthPool.sol')
-    contract_address = deployContract(web3, contract,web3.eth.accounts[0],1000000)
+def initialize_contract(web3, contract_source):
+    contract = create_contract(web3, contract_source)
+
+    deployer_address = input("Enter the address of the deployer: ")
+    deployer_address = web3.eth.accounts[0] if deployer_address == "" else deployer_address
+
+    gas = input("Enter the desired gas for the contract: ")
+    gas = 1000000 if gas == "" else int(gas)
+
+    contract_address = deploy_contract(web3, contract, deployer_address, gas)
     print("The contract address is: " + contract_address)
     return contract_address
 
 
-def get_abi():
-    contract_abi = getContractAbi('HealthPool.sol')
-    return contract_abi
-
-
-def getContractBytecode(filePath):
-    p = Popen(["solc","--optimize","--bin",filePath], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+def get_contract_bytecode(file_path):
+    p = Popen(["solc", "--optimize", "--bin", file_path], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
     bytecode, err = p.communicate()
 
     return "0x" + str(bytecode).split("\\n")[-2]
 
 
-def getContractBytecodeRuntime(filePath):
-    p = Popen(["solc","--optimize","--bin-runtime",filePath], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+def get_contract_bytecode_runtime(file_path):
+    p = Popen(["solc", "--optimize", "--bin-runtime", file_path], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
     bytecode, err = p.communicate()
 
     return "0x" + str(bytecode).split("\\n")[-2]
 
 
-def getContractAbi(filePath):
-    p = Popen(["solc","--optimize","--abi",filePath], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+def get_contract_abi(file_path):
+    p = Popen(["solc", "--optimize", "--abi", file_path], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 
     abi, err = p.communicate()
 
     return json.loads(str(abi).split("\\n")[-2])
 
-def createContract(web3, filePath):
-    return web3.eth.contract(abi=getContractAbi(filePath), bytecode=getContractBytecode(filePath), bytecode_runtime=getContractBytecodeRuntime(filePath))
 
-#returns transaction receipt
-def deployContract(web3, contract, deployer_address, gas):
-        tx_hash = contract.deploy(transaction={"from":deployer_address,"gas":gas})
-        #attribute dict
+def create_contract(web3, file_path):
+    return web3.eth.contract(abi=get_contract_abi(file_path),
+                             bytecode=get_contract_bytecode(file_path),
+                             bytecode_runtime=get_contract_bytecode_runtime(file_path))
+
+
+def deploy_contract(web3, contract, deployer_address, gas):
+        tx_hash = contract.deploy(transaction={"from": deployer_address, "gas": gas})
         receipt = web3.eth.getTransactionReceipt(tx_hash)
         return receipt["contractAddress"]
 
-def createContractInstance(web3, abi):
+
+def create_contract_instance(web3, abi):
     return web3.eth.contract(abi=abi)
 
-def readChain(contract_instance, contractaddr, function_name, *args):
 
-    contract_call = contract_instance.call({"to":contractaddr})
+def read_chain(contract_instance, contract_address, function_name, *args):
+
+    contract_call = contract_instance.call({"to": contract_address})
 
     if function_name == "getTotalFunds":
         return contract_call.getTotalFunds()
@@ -82,11 +92,12 @@ def readChain(contract_instance, contractaddr, function_name, *args):
     if function_name == "getParticipant":
         return contract_call.getParticipant(args[0])
 
-def writeChain(contract_instance, fromaddr, contractaddr, function_name, *args):
 
-    contract_transact = contract_instance.transact({"from":fromaddr, "to":contractaddr, "gas":1000000})
+def write_chain(contract_instance, from_address, contract_address, function_name, *args):
+
+    contract_transact = contract_instance.transact({"from": from_address, "to": contract_address, "gas": 1000000})
 
     if function_name == "registerParticipant":
-        return contract_transact.registerParticipant(args[0],args[1],args[2])
+        return contract_transact.registerParticipant(args[0], args[1], args[2])
     if function_name == "payFunds":
-        return contract_transact.payFunds(args[0],args[1])
+        return contract_transact.payFunds(args[0], args[1])

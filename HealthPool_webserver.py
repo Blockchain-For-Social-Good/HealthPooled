@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from HealthPool_functions import *
 
+global CONTRACT_SOURCE
 global WEB3
 global CONTRACT_ADDRESS
 global CONTRACT_ABI
@@ -8,40 +9,61 @@ global CONTRACT_ABI
 app = Flask(__name__)
 
 
-@app.route('/register_participant/<address>/<name>/<int:age>', methods=['GET'])
-def register_participant(address, name, age):
-    instance = createContractInstance(WEB3, CONTRACT_ABI)
-    receipt = writeChain(instance, WEB3.eth.accounts[0], CONTRACT_ADDRESS, "registerParticipant", address, name, age)
+@app.route('/participants', methods=['POST'])
+def register_participant():
+    instance = create_contract_instance(WEB3, CONTRACT_ABI)
 
-    output = [{'receipt': receipt}]
+    receipt = write_chain(instance, WEB3.eth.accounts[0], CONTRACT_ADDRESS, "registerParticipant", request.json['address'], request.json['name'], request.json['age'])
+    participant = read_chain(instance, CONTRACT_ADDRESS, "getParticipant", request.json['address'])
+
+    participant_dict = {'address': participant[0],
+               'id': participant[1],
+               'name': participant[2],
+               'age': participant[3],
+               'funds paid': participant[4],
+               'last payment': participant[5],
+               'registered': participant[6]}
+
+    output = [{'transaction': receipt,
+               'participant': participant_dict}]
 
     return jsonify({'result': output})
 
 
-@app.route('/payfunds_participant/<address>/<int:payment>', methods=['GET'])
-def pay_funds(address, payment):
-    instance = createContractInstance(WEB3, CONTRACT_ABI)
-    receipt = writeChain(instance, address, CONTRACT_ADDRESS, "payFunds", address, payment)
+@app.route('/participants/<address>/funds', methods=['PUT'])
+def pay_funds(address):
+    instance = create_contract_instance(WEB3, CONTRACT_ABI)
+    receipt = write_chain(instance, address, CONTRACT_ADDRESS, "payFunds", address, request.json['payment'])
+    participant = read_chain(instance, CONTRACT_ADDRESS, "getParticipant", address)
 
-    output = [{'receipt': receipt}]
+    participant_dict = {'address': participant[0],
+               'id': participant[1],
+               'name': participant[2],
+               'age': participant[3],
+               'funds paid': participant[4],
+               'last payment': participant[5],
+               'registered': participant[6]}
+
+    output = [{'transaction': receipt,
+               'participant': participant_dict}]
 
     return jsonify({'result': output})
 
 
 @app.route('/total_funds', methods=['GET'])
 def total_funds():
-    instance = createContractInstance(WEB3, CONTRACT_ABI)
-    funds = readChain(instance, CONTRACT_ADDRESS, "getTotalFunds")
+    instance = create_contract_instance(WEB3, CONTRACT_ABI)
+    funds = read_chain(instance, CONTRACT_ADDRESS, "getTotalFunds")
 
     output = [{'total funds': funds}]
 
     return jsonify({'result': output})
 
 
-@app.route('/info_participant/<address>', methods=['GET'])
+@app.route('/participants/<address>', methods=['GET'])
 def info_participant(address):
-    instance = createContractInstance(WEB3, CONTRACT_ABI)
-    info = readChain(instance, CONTRACT_ADDRESS, "getParticipant", address)
+    instance = create_contract_instance(WEB3, CONTRACT_ABI)
+    info = read_chain(instance, CONTRACT_ADDRESS, "getParticipant", address)
 
     output = [{'address': info[0],
                'id': info[1],
@@ -54,14 +76,14 @@ def info_participant(address):
     return jsonify({'result': output})
 
 
-@app.route('/all_info_participant', methods=['GET'])
+@app.route('/participants', methods=['GET'])
 def all_info_participant():
-    instance = createContractInstance(WEB3, CONTRACT_ABI)
-    addresses = readChain(instance, CONTRACT_ADDRESS, "getParticipantAddresses")
+    instance = create_contract_instance(WEB3, CONTRACT_ABI)
+    addresses = read_chain(instance, CONTRACT_ADDRESS, "getParticipantAddresses")
     output = []
 
     for a in addresses:
-        info = readChain(instance, CONTRACT_ADDRESS, "getParticipant", a)
+        info = read_chain(instance, CONTRACT_ADDRESS, "getParticipant", a)
         output.append({'address': info[0],
                        'id': info[1],
                        'name': info[2],
@@ -73,10 +95,10 @@ def all_info_participant():
     return jsonify({'result': output})
 
 
-@app.route('/all_address_participant', methods=['GET'])
+@app.route('/participants/addresses', methods=['GET'])
 def all_address_participant():
-    instance = createContractInstance(WEB3, CONTRACT_ABI)
-    addresses = readChain(instance, CONTRACT_ADDRESS, "getParticipantAddresses")
+    instance = create_contract_instance(WEB3, CONTRACT_ABI)
+    addresses = read_chain(instance, CONTRACT_ADDRESS, "getParticipantAddresses")
     output = [{'addresses': addresses}]
 
     return jsonify({'result': output})
@@ -84,6 +106,7 @@ def all_address_participant():
 
 if __name__ == '__main__':
     WEB3 = connect_to_rpc()
-    CONTRACT_ADDRESS = create_contract(WEB3)
-    CONTRACT_ABI = get_abi()
+    CONTRACT_SOURCE = declare_contract()
+    CONTRACT_ADDRESS = initialize_contract(WEB3, CONTRACT_SOURCE)
+    CONTRACT_ABI = get_contract_abi(CONTRACT_SOURCE)
     app.run(debug=True)
