@@ -5,6 +5,7 @@ contract HealthPool{
   //GLOBALS
   uint256 total_funds = 0;
 
+  //anyone should be able to access
   function getTotalFunds() constant returns (uint256){
     return total_funds;
   }
@@ -23,10 +24,12 @@ contract HealthPool{
     bool registered;
   }
 
+  //callable by anyone
   function getTotalParticipants() constant returns (uint256){
     return total_participants;
   }
 
+  //who is allowed to register participants? then limit to this entity
   function registerParticipant(address _addr, string _name, uint8 _age){
     Participant storage p = participants[_addr];
     assert(!p.registered);
@@ -36,6 +39,7 @@ contract HealthPool{
     total_participants ++;
   }
 
+  //only callable by the participant replace address param with msg.sender?
   function payFunds(address _addr, uint256 _payment){
     Participant storage p = participants[_addr];
     assert(p.registered);
@@ -46,11 +50,13 @@ contract HealthPool{
     total_funds += _payment;
   }
 
+  //anyone can access (name should not be included)
   function getParticipant(address _addr) constant returns (address, uint256, string, uint8, uint256, uint256, bool){
     Participant storage p = participants[_addr];
     return (p.addr, p.id, p.name, p.age, p.funds_paid, p.last_payment, p.registered);
   }
 
+  //anyone can access
   function getParticipantAddresses() constant returns (address[]){
     return participant_addrs;
   }

@@ -11,6 +11,9 @@ app = Flask(__name__)
 
 @app.route('/participants', methods=['POST'])
 def register_participant():
+    """
+    :return: json including the transaction hash and the participant data
+    """
     instance = create_contract_instance(WEB3, CONTRACT_ABI)
 
     receipt = write_chain(instance, WEB3.eth.accounts[0], CONTRACT_ADDRESS, "registerParticipant", request.json['address'], request.json['name'], request.json['age'])
@@ -32,6 +35,10 @@ def register_participant():
 
 @app.route('/participants/<address>/funds', methods=['PUT'])
 def pay_funds(address):
+    """
+    :param address: Ethereum address of a registered participant
+    :return: json of the transaction hash and the updated participant data
+    """
     instance = create_contract_instance(WEB3, CONTRACT_ABI)
     receipt = write_chain(instance, address, CONTRACT_ADDRESS, "payFunds", address, request.json['payment'])
     participant = read_chain(instance, CONTRACT_ADDRESS, "getParticipant", address)
@@ -52,6 +59,9 @@ def pay_funds(address):
 
 @app.route('/total_funds', methods=['GET'])
 def total_funds():
+    """
+    :return: json of the total funds in the health pool
+    """
     instance = create_contract_instance(WEB3, CONTRACT_ABI)
     funds = read_chain(instance, CONTRACT_ADDRESS, "getTotalFunds")
 
@@ -62,6 +72,10 @@ def total_funds():
 
 @app.route('/participants/<address>', methods=['GET'])
 def info_participant(address):
+    """
+    :param address: Ethereum address of a registered participant
+    :return: json of the specified participant's data
+    """
     instance = create_contract_instance(WEB3, CONTRACT_ABI)
     info = read_chain(instance, CONTRACT_ADDRESS, "getParticipant", address)
 
@@ -78,6 +92,9 @@ def info_participant(address):
 
 @app.route('/participants', methods=['GET'])
 def all_info_participant():
+    """
+    :return: json of all of the participants in the health pool
+    """
     instance = create_contract_instance(WEB3, CONTRACT_ABI)
     addresses = read_chain(instance, CONTRACT_ADDRESS, "getParticipantAddresses")
     output = []
@@ -97,6 +114,9 @@ def all_info_participant():
 
 @app.route('/participants/addresses', methods=['GET'])
 def all_address_participant():
+    """
+    :return: json that includes a list of all of the participant addresses
+    """
     instance = create_contract_instance(WEB3, CONTRACT_ABI)
     addresses = read_chain(instance, CONTRACT_ADDRESS, "getParticipantAddresses")
     output = [{'addresses': addresses}]
